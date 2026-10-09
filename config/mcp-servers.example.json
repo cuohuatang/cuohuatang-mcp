@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "cuohuatang": {
+      "command": "uvx",
+      "args": ["cuohuatang-mcp"],
+      "env": {
+        "CUOHUATANG_VAULT_PATH": "D:/Obsidian/你的库/vault",
+        "CUOHUATANG_INDEX_PATH": "D:/Obsidian/你的库/index.sqlite"
+      }
+    }
+  }
+}
