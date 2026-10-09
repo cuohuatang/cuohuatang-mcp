@@ -1,17 +1,17 @@
 # cuohuatang-mcp
 
-一体化 MCP 服务器：**自动记忆 + 自动总结 + 踩坑本(errlore式) + 纠错台账(AgentRecall式) + Obsidian 嫁接(obsidian-mcp式)**。
+一体化 MCP 服务器：**自动记忆 + 自动总结 + 踩坑本(errlore式) + 纠错台账(AgentRecall式) + Obsidian 嫁接(obsidian-mcp式) + 会话交接(session-handoff式) + 技能沉淀(session-to-skill式)**。
 免费、免 API key、纯本地，一套工具接入 Claude Code / Cursor / OpenClaw / Hermes / Codex 等所有 MCP 客户端。
 
-> 当前状态：**V0.1 已发布**（GitHub 公开仓库 `cuohuatang/cuohuatang-mcp`，tag v0.1.0）。完整设计见 [DESIGN.md](DESIGN.md)。
-> 路线：V0.2（会话交接 + 技能沉淀，18 工具）已实现于 feature 分支，待用户指示后发布。
+> 当前状态：**V0.2 已发布**（GitHub 公开仓库 `cuohuatang/cuohuatang-mcp`，tag v0.2.0）。完整设计见 [DESIGN.md](DESIGN.md)。
+> V0.2 核心：**静默提炼工作方式/工作流并提示生成 skill**——`cm_skill_propose` 从历史记录真实提炼步骤、规则、失败处理与来源双链，生成可安装 SKILL.md 草稿。
 
 ## 快速开始
 
 ```bash
 pip install -e ".[dev]"
 cuohuatang-mcp --help        # CLI 入口
-python -m pytest -q          # 跑测试
+python -m pytest -q          # 跑测试（13 项全过）
 ```
 
 以 MCP 服务器方式运行：
@@ -42,7 +42,7 @@ Claude Code：`claude mcp add cuohuatang -- uvx cuohuatang-mcp`，或写入 `.mc
 
 环境变量均可编辑：`CUOHUATANG_HOME`（默认 `~/.cuohuatang`）、`CUOHUATANG_VAULT_PATH`、`CUOHUATANG_INDEX_PATH`。
 
-## 工具一览（13 个）
+## 工具一览（18 个）
 
 | 模块 | 工具 |
 |---|---|
@@ -51,10 +51,22 @@ Claude Code：`claude mcp add cuohuatang -- uvx cuohuatang-mcp`，或写入 `.mc
 | 踩坑本 | `cm_lesson_add` `cm_lesson_inject` |
 | 纠错台账 | `cm_correction_log` `cm_correction_verify` `cm_correction_check` |
 | Obsidian | `cm_vault_init` `cm_obsidian_read` `cm_obsidian_write` |
+| 会话交接 | `cm_handoff_create` `cm_handoff_list` `cm_handoff_resume` |
+| 技能沉淀 | `cm_skill_suggest` `cm_skill_propose` |
 
-## 检索（V0.1 即混合）
+## V0.2 核心：静默提炼工作流 → 生成 skill
 
-默认 **hybrid = BM25（SQLite FTS5）+ TF-IDF 向量余弦**（纯本地、无外部模型），结果带 `method: bm25/hybrid/vector` 字段可审计；中文经 jieba 分词，`QMT`/`报错`/`QMT 报错`/`行情` 均实测命中。
+```
+每次会话结束：cm_summarize 沉淀要点 → cm_skill_suggest 检查重复工作流
+→ 同一主题≥2次即自动提示："需要我把『×××』静默提炼成一个 skill 吗？"
+→ 用户同意后 cm_skill_propose 从历史记录真实提炼：
+   工作流步骤（编号列表/命令/动词句）+ 规则（踩坑本）+ 失败处理（纠错台账）+ 来源双链
+   → 生成 SKILL.md 草稿（只展示不写盘，推荐 ~/.agents/skills/<name>/SKILL.md）
+```
+
+## 检索（混合）
+
+默认 **hybrid = BM25（SQLite FTS5）+ TF-IDF 向量余弦**（纯本地、无外部模型），结果带 `method: bm25/hybrid/vector` 字段可审计；中文经 jieba 分词。
 
 ## 数据（Obsidian 唯一真相源）
 
@@ -63,7 +75,8 @@ Claude Code：`claude mcp add cuohuatang -- uvx cuohuatang-mcp`，或写入 `.mc
 ├── 01-流水账/YYYY-MM-DD.md    ← 记忆
 ├── 02-踩坑本/<slug>.md        ← 踩坑本（errlore 式，含 [[双链]] 回源）
 ├── 03-纠错台账/<slug>.md      ← 纠错台账（AgentRecall 式，含 [[双链]] 回源）
-└── 04-经验总结/<slug>.md      ← 自动总结
+├── 04-经验总结/<slug>.md      ← 自动总结
+└── 05-交接/<date>-<slug>.md   ← 六段式会话交接（V0.2）
 ~/.cuohuatang/index.sqlite     ← 检索索引（FTS5 + 向量缓存，可重建）
 ```
 

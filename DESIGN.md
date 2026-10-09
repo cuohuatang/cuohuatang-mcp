@@ -1,10 +1,10 @@
-# cuohuatang-mcp 设计文档（V0.1 发布版）
+# cuohuatang-mcp 设计文档（V0.2 发布版）
 
-> 状态：**V0.1 已发布**（GitHub 公开仓库 `cuohuatang/cuohuatang-mcp`，tag v0.1.0）
+> 状态：**V0.2 已发布**（GitHub 公开仓库 `cuohuatang/cuohuatang-mcp`，tag v0.2.0）
 > 技术栈：Python 3.10+（`mcp>=2.0`，MCPServer API）
 > 目标仓库：`cuohuatang/cuohuatang-mcp`（GitHub 公开）
 > 许可：MIT
-> 版本节奏：V0.2（会话交接 + 技能沉淀）已在 feature 分支 `feature/v0.2-handoff-skillcraft` 实现并验证，**待用户指示后发布**（见附录 A）
+> V0.2 核心：**静默提炼工作方式/工作流并提示生成 skill**（skillcraft 从历史记录真实提炼步骤、规则、失败处理与来源双链）
 
 ---
 
@@ -104,6 +104,23 @@
 | `cm_obsidian_read` | path | content | 读取 vault 内 markdown（含 frontmatter 解析） |
 | `cm_obsidian_write` | path, content, overwrite=False | path | 写入/新建 vault 内 markdown（安全：默认不覆盖） |
 
+### 5.6 会话交接 handoff（session-handoff 式）★ V0.2 新增
+
+| 工具 | 输入 | 输出 | 说明 |
+|---|---|---|---|
+| `cm_handoff_create` | task_overview, current_state, important_discoveries?, next_steps?, context_to_preserve?, unanswered_question?, from_agent?, to_agent? | note_id, path | 六段式交接文档写入 05-交接，跨 Agent 续命 |
+| `cm_handoff_list` | top_k=10 | 交接列表 | 列出最近交接 |
+| `cm_handoff_resume` | handoff_id | must_answer/question/instruction | 新 Agent 接手：有未答问题先转问，否则直接开干 |
+
+### 5.7 技能沉淀 skillcraft（session-to-skill / ritual 式）★ V0.2 核心
+
+| 工具 | 输入 | 输出 | 说明 |
+|---|---|---|---|
+| `cm_skill_suggest` | top_k=30 | suggestions[], prompt | 静默扫描记忆/踩坑/纠错/交接，按 tags 聚类；主题≥2 次自动提示"需要我把『×××』静默提炼成一个 skill 吗？" |
+| `cm_skill_propose` | target, tags? | skill_name, evidence_count, extracted_steps, SKILL.md 草稿, 推荐路径 | **从历史记录真实提炼**工作流步骤（编号列表/命令/动词句）、规则（踩坑本）、失败处理（纠错台账）、来源双链，生成可安装 SKILL.md 草稿（只展示不写盘） |
+
+> 注：用户点名的 "ritual" 在 squidllee/skills 仓库中无独立同名技能，"挖重复工作流 + 自动提示生成 skill" 对应 **session-to-skill**（已完整读取并按其精华实现）。
+
 ## 6. 存储格式
 
 ### 6.1 目录结构（`CUOHUATANG_VAULT_PATH`，默认 `~/.cuohuatang/vault` ★评审决策③：默认该路径且可编辑——环境变量/运行时参数均可覆盖）
@@ -113,7 +130,8 @@ vault/
 ├── 01-流水账/YYYY-MM-DD.md     ← memory 写入，按日期
 ├── 02-踩坑本/<slug>.md         ← lessons 写入（errlore 式文件踩坑本）
 ├── 03-纠错台账/<slug>.md       ← corrections 写入（AgentRecall 式台账）
-└── 04-经验总结/<slug>.md       ← summarize 定期产物
+├── 04-经验总结/<slug>.md       ← summarize 定期产物
+└── 05-交接/<date>-<slug>.md    ← handoff 写入（V0.2 六段式交接）
 ```
 
 ### 6.2 markdown frontmatter 规范（Obsidian 原生支持）
@@ -218,20 +236,22 @@ CREATE VIRTUAL TABLE IF NOT EXISTS notes USING fts5(
 | storage | vault 初始化幂等；FTS5 建表/写入/检索；路径穿越防护；**混合检索向量兜底**；索引重建 | ✅ |
 | memory | save→recall 闭环；中文关键词检索 | ✅ |
 | lessons/corrections | add→inject / log→check 闭环；frontmatter 字段完整性；**双链落盘** | ✅ |
-| obsidian | read/write 往返；overwrite=False 拒绝覆盖 | ✅ |
-| server | 13 个工具全部注册成功 | ✅ |
+| handoff | create→resume 闭环（直接接手 / 未答问题转交） | ✅ |
+| skillcraft | 重复工作流聚类自动提示；**从历史记录真实提炼步骤/规则/双链** | ✅ |
+| server | 18 个工具全部注册成功 | ✅ |
 
-V0.1 共 **9 项单元测试全过** + 端到端 stdio 冒烟（13 工具注册、记忆/踩坑/纠错/总结全链路、混合检索、双链、markdown 落盘到 4 个 Obsidian 目录）。
+V0.2 共 **13 项单元测试全过** + 端到端 stdio 冒烟（18 工具注册、记忆/踩坑/纠错/总结/交接/技能沉淀全链路、混合检索、双链、markdown 落盘到 5 个 Obsidian 目录）。
 
 ## 11. 发布记录（对齐 mmczok 流程：先拉后改，改完推，发版前请示）
 
 1. ✅ 评审本设计 + 骨架（用户确认）
-2. ✅ 实现全部模块（记忆/教训/台账/总结/桥梁 + 向量/双链）→ 本地 9 项测试全过 + 端到端冒烟
-3. ✅ **2026-10-09 推送 GitHub 公开仓库 `cuohuatang/cuohuatang-mcp`，打 tag v0.1.0**
-4. ⏳ V0.2（handoff + skillcraft，18 工具）已实现于 feature 分支，**待用户指示后发布**
-5. 可选：发布 PyPI（`pip install cuohuatang-mcp` / `uvx cuohuatang-mcp`）
+2. ✅ V0.1 实现（记忆/教训/台账/总结/桥梁 + 向量/双链）→ 9 项测试全过
+3. ✅ **2026-10-09 推送 GitHub 公开仓库，打 tag v0.1.0**（13 工具）
+4. ✅ V0.2 实现（handoff 六段式交接 + skillcraft 静默提炼工作流，18 工具）→ 13 项测试全过
+5. ✅ **2026-10-09 推送 GitHub 公开仓库，打 tag v0.2.0**（18 工具）
+6. 可选：发布 PyPI（`pip install cuohuatang-mcp` / `uvx cuohuatang-mcp`）
 
-## 12. 实施记录（V0.1）
+## 12. 实施记录（V0.1 + V0.2）
 
 | 项 | 结论 |
 |---|---|
@@ -239,9 +259,11 @@ V0.1 共 **9 项单元测试全过** + 端到端 stdio 冒烟（13 工具注册�
 | 中文检索 | **jieba 分词 + FTS5(unicode61)**：实测 `QMT`/`报错`/`QMT 报错`/`行情` 全部命中（纯 unicode61 连续中文无法分词，trigram 对 2 字词失效，均不可用） |
 | 向量检索 | **TF-IDF + 余弦**（查询词子空间投影）；hybrid 归一化加权融合；`method` 字段可审计 |
 | tags 存储 | tags 列保持原样不切词（聚类/过滤精确），全文命中走 content 列 |
-| 双链约定 | `links` 参数 → frontmatter + 正文 `[[...]]` 渲染（踩坑/纠错已实现） |
+| 双链约定 | `links` 参数 → frontmatter + 正文 `[[...]]` 渲染（踩坑/纠错/交接/技能来源） |
 | 空查询 | `cm_correction_check` 空查询走 `recent()`（按更新时间倒序），不再传 FTS 通配符 |
-| 验证 | 9 项单元测试全过 + 端到端 stdio 冒烟（13 工具、混合检索、双链、4 目录落盘） |
+| 交接（V0.2） | 六段式结构，空节不编造；有未答问题必须转问用户，无则直接接手 |
+| 技能沉淀（V0.2 核心） | `cm_skill_propose` 从历史记录**真实提炼**：召回=关键词搜索+tags 关联；步骤提取=编号列表/项目符号/命令行/动词句；规则=踩坑本；失败处理=纠错台账；来源=双链回源；草稿只展示不写盘 |
+| 验证 | 13 项单元测试全过 + 端到端 stdio 冒烟（18 工具、混合检索、双链、5 目录落盘） |
 
 ## 13. 已确认决策（用户评审通过）
 
@@ -252,10 +274,9 @@ V0.1 共 **9 项单元测试全过** + 端到端 stdio 冒烟（13 工具注册�
 | ③ | vault 默认 `~/.cuohuatang/vault` 且可编辑 | ✅ 环境变量/运行时参数可覆盖（第 6.1、7 节） |
 | ④ | 交接/踩坑加 Obsidian 双链约定 | ✅ 踩坑/纠错已实现（第 6.3 节）；交接随 V0.2 沿用 |
 
-## 附录 A：V0.2 规划（已实现，待发布）
-
-> 已完整实现于 `feature/v0.2-handoff-skillcraft` 分支并验证（11 项测试全过、18 工具端到端冒烟），**未并入 V0.1 发布**，等用户指示后合并发布 v0.2.0。
+## 附录 A：V0.2 增量说明（已发布 v0.2.0）
 
 - **⑥ 会话交接（session-handoff 式）**：`cm_handoff_create/list/resume`，六段式交接文档写入 `05-交接`；有未答问题先转问用户，否则新 Agent 直接接手。
-- **⑦ 技能沉淀（session-to-skill / ritual 式）**：`cm_skill_suggest` 按主题聚类，同一主题≥2 次自动提示"需要我把『×××』生成一个 skill 吗？"；`cm_skill_propose` 生成 SKILL.md 草稿（只展示不写盘，推荐跨 Agent 路径 `~/.agents/skills/<name>/SKILL.md`）。
+- **⑦ 技能沉淀（session-to-skill / ritual 式，V0.2 核心）**：`cm_skill_suggest` 按主题聚类，同一主题≥2 次自动提示"需要我把『×××』静默提炼成一个 skill 吗？"；`cm_skill_propose` 从历史记录**真实提炼**工作流步骤/规则/失败处理/来源双链，生成 SKILL.md 草稿（只展示不写盘，推荐跨 Agent 路径 `~/.agents/skills/<name>/SKILL.md`）。
 - 注：用户点名的 "ritual" 在 squidllee/skills 仓库中无独立同名技能，"挖重复工作流 + 自动提示生成 skill" 对应 **session-to-skill**（已完整读取并按其精华实现）。
+- 静默提炼触发时机（写入 AGENT 一体化提示词）：每次会话结束 → `cm_summarize` 沉淀 → `cm_skill_suggest` 检查重复工作流 → 命中即主动询问用户是否生成 skill。

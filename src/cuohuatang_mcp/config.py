@@ -19,4 +19,5 @@ VAULT_DIRS = {
     "lessons": "02-踩坑本",
     "corrections": "03-纠错台账",
     "summaries": "04-经验总结",
+    "handoffs": "05-交接",
 }

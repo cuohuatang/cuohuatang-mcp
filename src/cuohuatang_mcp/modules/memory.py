@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import datetime
 from typing import Any
 
 from ..config import VAULT_DIRS
@@ -13,10 +13,10 @@ _KIND = "memory"
 
 
 def save(content: str, title: str | None = None, tags: list[str] | None = None) -> dict[str, Any]:
-    """记录一次会话事实/上下文，写入 01-流水账 并按日期归档。"""
+    """记录一次会话事实/上下文，写入 01-流水账（每条独立文件，不覆盖历史）。"""
     title = title or content.strip().splitlines()[0][:40]
     note_id = f"mem-{uuid.uuid4().hex[:12]}"
-    rel = f"{VAULT_DIRS['memory']}/{date.today().isoformat()}.md"
+    rel = f"{VAULT_DIRS['memory']}/{datetime.now().strftime('%Y-%m-%d-%H%M%S')}-{note_id[4:10]}.md"
     meta = {
         "note_id": note_id,
         "title": title,
@@ -24,7 +24,7 @@ def save(content: str, title: str | None = None, tags: list[str] | None = None) 
         "tags": tags or [],
         "model": "any",
     }
-    return vault.write_note(rel, content, meta, overwrite=True)
+    return vault.write_note(rel, content, meta, overwrite=False)
 
 
 def recall(query: str, top_k: int = 5) -> list[dict[str, Any]]:

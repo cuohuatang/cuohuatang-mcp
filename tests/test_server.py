@@ -1,4 +1,4 @@
-"""服务器骨架测试：13 个工具全部注册（V0.1）。"""
+"""服务器骨架测试：18 个工具全部注册（V0.2）。"""
 
 from __future__ import annotations
 
@@ -23,5 +23,10 @@ def test_all_tools_registered() -> None:
         "cm_vault_init",
         "cm_obsidian_read",
         "cm_obsidian_write",
+        "cm_handoff_create",
+        "cm_handoff_list",
+        "cm_handoff_resume",
+        "cm_skill_suggest",
+        "cm_skill_propose",
     }
     assert expected <= names, f"缺失工具: {expected - names}"

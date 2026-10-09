@@ -107,6 +107,22 @@ def read_note(relative: str) -> dict[str, Any]:
     return {"path": str(p), "meta": meta, "content": body}
 
 
+def read_note_by_id(note_id: str) -> dict[str, Any] | None:
+    """按 note_id 或相对路径读取 note（兼容 mem-/les-/cor-/hdo- 等 ID 与路径两种形式）。"""
+    try:
+        return read_note(note_id)
+    except (FileNotFoundError, ValueError):
+        pass
+    for rel, _ in _walk_vault():
+        try:
+            note = read_note(rel)
+        except Exception:  # noqa: BLE001
+            continue
+        if note["meta"].get("note_id") == note_id or rel.endswith(note_id):
+            return note
+    return None
+
+
 def write_note(
     relative: str,
     content: str,
