@@ -1,4 +1,4 @@
-"""cuohuatang-mcp 服务器入口：MCPServer 注册全部 18 个 cm_ 工具。"""
+"""cuohuatang-mcp 服务器入口：MCPServer 注册全部 13 个 cm_ 工具（V0.1）。"""
 
 from __future__ import annotations
 
@@ -7,15 +7,14 @@ from typing import Any
 from mcp.server.mcpserver import MCPServer
 
 from . import __version__
-from .modules import corrections, handoff, lessons, memory, obsidian, skillcraft, summarize
+from .modules import corrections, lessons, memory, obsidian, summarize
 
 mcp = MCPServer(
     name="cuohuatang-mcp",
     instructions=(
         "一体化记忆系统：自动记忆、自动总结、踩坑本(errlore式)、纠错台账(AgentRecall式)、"
-        "Obsidian 嫁接、会话交接(session-handoff式)、技能沉淀(session-to-skill式)。"
-        "全部本地存储、免 API key。开工前建议先 cm_memory_recall + cm_correction_check；"
-        "跨会话续命用 cm_handoff_create/cm_handoff_resume；发现重复工作流用 cm_skill_suggest。"
+        "Obsidian 嫁接。全部本地存储、免 API key；混合检索（BM25 + TF-IDF 向量）。"
+        "开工前建议先 cm_memory_recall + cm_correction_check。"
     ),
 )
 
@@ -101,51 +100,6 @@ def cm_obsidian_read(path: str) -> dict[str, Any]:
 def cm_obsidian_write(path: str, content: str, overwrite: bool = False) -> dict[str, Any]:
     """写入 vault 内 markdown（默认不覆盖）。"""
     return obsidian.write(path, content, overwrite)
-
-
-# ---------- ⑥ 会话交接（session-handoff 式）----------
-@mcp.tool()
-def cm_handoff_create(
-    task_overview: str,
-    current_state: str,
-    important_discoveries: str = "",
-    next_steps: str = "",
-    context_to_preserve: str = "",
-    unanswered_question: str | None = None,
-    from_agent: str | None = None,
-    to_agent: str | None = None,
-) -> dict[str, Any]:
-    """把"上一个 Agent 干到哪"总结为六段式交接文档（跨 Agent 续命）。"""
-    return handoff.create(
-        task_overview, current_state, important_discoveries,
-        next_steps, context_to_preserve, unanswered_question,
-        from_agent, to_agent,
-    )
-
-
-@mcp.tool()
-def cm_handoff_list(top_k: int = 10) -> list[dict[str, Any]]:
-    """列出最近交接文档。"""
-    return handoff.list_handoffs(top_k)
-
-
-@mcp.tool()
-def cm_handoff_resume(handoff_id: str) -> dict[str, Any]:
-    """新 Agent 接手：读取交接；有未答问题先转问，否则直接开干。"""
-    return handoff.resume(handoff_id)
-
-
-# ---------- ⑦ 技能沉淀（session-to-skill / ritual 式）----------
-@mcp.tool()
-def cm_skill_suggest(top_k: int = 30) -> dict[str, Any]:
-    """挖掘重复工作流，自动提示"需要我把×××生成一个 skill 吗？"。"""
-    return skillcraft.suggest(top_k)
-
-
-@mcp.tool()
-def cm_skill_propose(target: str, tags: list[str] | None = None) -> dict[str, Any]:
-    """把重复工作流沉淀为 SKILL.md 草稿（只展示，确认后才写盘）。"""
-    return skillcraft.propose(target, tags)
 
 
 def main() -> None:
